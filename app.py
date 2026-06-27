@@ -1,25 +1,32 @@
+import streamlit as st
 from ultralytics import YOLO
 import cv2
+import numpy as np
 import os
 from datetime import datetime
+
+st.set_page_config(page_title="AI Road Hazard Detection", layout="wide")
+
+st.title("🚦 AI Road Hazard Detection")
 
 # Load YOLO model
 model = YOLO("yolov8n.pt")
 
-# Webcam
-cap = cv2.VideoCapture(0)
-
 # Hazards to detect
 hazards = ["car", "truck", "bus", "motorcycle", "dog", "cow"]
 
-# Create output folder
+# Output folder
 os.makedirs("output", exist_ok=True)
 
-while True:
-    ret, frame = cap.read()
+uploaded_file = st.file_uploader(
+    "Upload an Image",
+    type=["jpg", "jpeg", "png"]
+)
 
-    if not ret:
-        break
+if uploaded_file is not None:
+
+    file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+    frame = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
     results = model(frame)
 
@@ -35,31 +42,27 @@ while True:
 
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
 
-                cv2.putText(frame, name, (x1, y1-10),
+                cv2.putText(frame,
+                            name,
+                            (x1, y1-10),
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.8,
-                            (0,255,0), 2)
+                            (0,255,0),
+                            2)
 
                 cv2.putText(frame,
                             f"ALERT: {name.upper()} DETECTED",
                             (20,40),
                             cv2.FONT_HERSHEY_SIMPLEX,
                             1,
-                            (0,0,255),3)
+                            (0,0,255),
+                            3)
 
-                # Save screenshot
                 filename = datetime.now().strftime("%Y%m%d_%H%M%S") + ".jpg"
                 filepath = os.path.join("output", filename)
                 cv2.imwrite(filepath, frame)
 
-                # Save log
-                with open("detections.txt","a") as f:
+                with open("detections.txt", "a") as f:
                     f.write(f"{datetime.now()} - {name}\n")
 
-    cv2.imshow("AI Road Hazard Detection", frame)
-
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
-
-cap.release()
-cap = cv2.VideoCapture(0)
+    st.image(frame, channels="BGR", caption="Detection Result")
