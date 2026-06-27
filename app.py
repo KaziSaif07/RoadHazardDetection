@@ -62,4 +62,4 @@ while True:
         break
 
 cap.release()
-cv2.destroyAllWindows()
+cap = cv2.VideoCapture(0)
